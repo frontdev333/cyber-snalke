@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"math/rand/v2"
 	"time"
 
@@ -27,11 +28,10 @@ type Game struct {
 
 func NewGame(width, height int) *Game {
 	g := &Game{
-		snake:  []Point{{20, 8}},
+		snake:  []Point{{width/2 - 1, height/2 - 1}},
 		dir:    Point{1, 0},
 		width:  width,
 		height: height,
-		quit:   make(chan struct{}),
 		level:  1,
 	}
 
@@ -43,7 +43,6 @@ func NewGame(width, height int) *Game {
 
 func (g *Game) draw() {
 	tb.Clear(tb.ColorDefault, tb.ColorDefault)
-	tb.Flush()
 	tb.SetCell(0, 0, '┌', tb.ColorBlack, tb.ColorDefault)
 	tb.SetCell(g.width, 0, '┐', tb.ColorBlack, tb.ColorDefault)
 	tb.SetCell(0, g.height, '└', tb.ColorBlack, tb.ColorDefault)
@@ -127,25 +126,27 @@ func (g *Game) isOutOfBounds(p Point) bool {
 }
 
 func (g *Game) placeFood() {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 10; i++ {
 		place := getRandPoint(g)
 
-		if isPointFree(g, place) {
+		if isPointFree(g, place) && place != g.food {
 			g.food = place
-			break
+			return
 		}
 	}
+	slog.Warn("there's no free places for food")
 }
 
 func (g *Game) placeMalware() {
-	for i := 0; i < 3; i++ {
+	for i := 0; i < 10; i++ {
 		place := getRandPoint(g)
 
-		if isPointFree(g, place) {
+		if isPointFree(g, place) && place != g.food {
 			g.malware = append(g.malware, place)
-			break
+			return
 		}
 	}
+	slog.Warn("there's no free places for malware")
 }
 
 func (g *Game) move() {
@@ -155,6 +156,7 @@ func (g *Game) move() {
 	case g.level == 2 && len(g.malware) < 2:
 		g.placeMalware()
 	case g.level == 3 && len(g.malware) < 3:
+		g.placeMalware()
 	}
 
 	snakeHead := Point{
@@ -164,6 +166,7 @@ func (g *Game) move() {
 
 	if !isPointFree(g, snakeHead) {
 		g.gameOver = true
+		return
 	}
 
 	g.snake = append([]Point{snakeHead}, g.snake...)
@@ -204,8 +207,8 @@ func (g *Game) drawGameOver() {
 }
 
 func getCenterTextCoordinates(text string, centerX int) int {
-	gmeOvrX := centerX - (len(text) / 2)
-	return gmeOvrX
+	startX := centerX - (len(text) / 2)
+	return startX
 }
 
 func (p *Point) ToRune() rune {
