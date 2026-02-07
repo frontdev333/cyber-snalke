@@ -22,7 +22,6 @@ type Game struct {
 	score         int
 	gameOver      bool
 	width, height int
-	quit          chan struct{}
 	level         int
 }
 
